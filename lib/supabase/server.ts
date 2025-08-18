@@ -25,3 +25,5 @@ export const createClient = cache(() => {
 
   return createServerComponentClient({ cookies: () => cookieStore })
 })
+
+export const createServerClient = createClient

@@ -11,6 +11,7 @@ import Link from "next/link"
 import { useRouter } from "next/navigation"
 import type { User as SupabaseUser } from "@supabase/supabase-js"
 import TaskDetailDialog from "@/components/task-detail-dialog"
+import NavigationTabs from "@/components/navigation-tabs" // Added NavigationTabs component
 
 interface Meeting {
   id: string
@@ -160,6 +161,8 @@ export default function Dashboard({ user }: DashboardProps) {
         </div>
       </header>
 
+      <NavigationTabs />
+
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="flex items-center justify-between mb-6">
           <h2 className="text-3xl font-bold font-work-sans text-foreground">Dashboard</h2>
@@ -173,7 +176,7 @@ export default function Dashboard({ user }: DashboardProps) {
           <div className="lg:col-span-2">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-xl font-semibold font-work-sans text-foreground">My Tasks</h3>
-              <Link href="/todos">
+              <Link href="/my-tasks">
                 <Button variant="outline" size="sm">
                   View All
                   <ArrowRight className="h-4 w-4 ml-2" />

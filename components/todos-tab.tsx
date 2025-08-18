@@ -159,12 +159,20 @@ export default function TodosTab({ meetingId, todos, participants, currentUser, 
   }
 
   const handleAssigneeChange = (value: string) => {
-    const participant = participants.find((p) => p.profiles?.id === value)
-    setFormData((prev) => ({
-      ...prev,
-      assigned_to: value,
-      assigned_email: participant?.profiles?.email || "",
-    }))
+    if (value === "unassigned") {
+      setFormData((prev) => ({
+        ...prev,
+        assigned_to: "",
+        assigned_email: "",
+      }))
+    } else {
+      const participant = participants.find((p) => p.profiles?.id === value)
+      setFormData((prev) => ({
+        ...prev,
+        assigned_to: value,
+        assigned_email: participant?.profiles?.email || "",
+      }))
+    }
   }
 
   const getInitials = (name: string, email: string) => {

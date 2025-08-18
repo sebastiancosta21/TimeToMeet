@@ -9,3 +9,5 @@ export const isSupabaseConfigured =
 
 // Create a singleton instance of the Supabase client for Client Components
 export const supabase = createClientComponentClient()
+
+export const createClient = () => supabase
