@@ -128,6 +128,14 @@ export default function MeetingDetail({ meeting, user, isCreator }: MeetingDetai
   }
 
   const handleSendSummary = async () => {
+    // Show confirmation dialog for one-time meetings
+    if (!meetingData.is_recurring) {
+      const confirmed = window.confirm(
+        "This is a one-time meeting. Submitting the summary will automatically close this meeting and it cannot be reopened. Are you sure you want to continue?",
+      )
+      if (!confirmed) return
+    }
+
     setSendingSummary(true)
 
     try {
@@ -137,7 +145,15 @@ export default function MeetingDetail({ meeting, user, isCreator }: MeetingDetai
         console.error("Error sending summary:", result.error)
         alert("Failed to send summary: " + result.error)
       } else {
-        alert("Meeting summary sent successfully to all participants!")
+        if (meetingData.is_recurring) {
+          alert(
+            "Meeting summary sent successfully to all participants! This recurring meeting remains open for future sessions.",
+          )
+        } else {
+          alert("Meeting summary sent successfully to all participants! This meeting has been closed.")
+          // Refresh the page to show updated status
+          window.location.reload()
+        }
       }
     } catch (error) {
       console.error("Error sending summary:", error)
@@ -204,6 +220,11 @@ export default function MeetingDetail({ meeting, user, isCreator }: MeetingDetai
                       Recurring
                     </Badge>
                   )}
+                  {!currentMeeting.is_recurring && (
+                    <Badge variant="outline" className="bg-orange-50 text-orange-700 border-orange-200">
+                      One-Time
+                    </Badge>
+                  )}
                 </div>
                 <p className="text-sm text-muted-foreground">{currentMeeting.description}</p>
               </div>
@@ -219,7 +240,7 @@ export default function MeetingDetail({ meeting, user, isCreator }: MeetingDetai
                   ) : (
                     <>
                       <Send className="h-4 w-4 mr-2" />
-                      Submit Meeting Summary
+                      {meetingData.is_recurring ? "Send Meeting Summary" : "Submit Meeting Summary & Close"}
                     </>
                   )}
                 </Button>

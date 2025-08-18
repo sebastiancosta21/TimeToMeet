@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Checkbox } from "@/components/ui/checkbox"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import {
   Dialog,
   DialogContent,
@@ -35,6 +36,7 @@ export default function CreateMeetingDialog({ open, onOpenChange, onMeetingCreat
     duration_minutes: 60,
     location: "",
     is_recurring: false,
+    recurrence_frequency: "weekly",
   })
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -63,6 +65,7 @@ export default function CreateMeetingDialog({ open, onOpenChange, onMeetingCreat
         duration_minutes: 60,
         location: "",
         is_recurring: false,
+        recurrence_frequency: "weekly",
       })
 
       onMeetingCreated()
@@ -151,18 +154,44 @@ export default function CreateMeetingDialog({ open, onOpenChange, onMeetingCreat
                 />
               </div>
             </div>
-            <div className="flex items-center space-x-2">
-              <Checkbox
-                id="is_recurring"
-                checked={formData.is_recurring}
-                onCheckedChange={(checked) => handleChange("is_recurring", checked === true)}
-              />
-              <Label
-                htmlFor="is_recurring"
-                className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-              >
-                Recurring meeting (can be run multiple times)
-              </Label>
+            <div className="space-y-3">
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id="is_recurring"
+                  checked={formData.is_recurring}
+                  onCheckedChange={(checked) => handleChange("is_recurring", checked === true)}
+                />
+                <Label
+                  htmlFor="is_recurring"
+                  className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                >
+                  Recurring meeting
+                </Label>
+              </div>
+              {formData.is_recurring && (
+                <div className="ml-6 space-y-2">
+                  <Label htmlFor="recurrence_frequency">Frequency</Label>
+                  <Select
+                    value={formData.recurrence_frequency}
+                    onValueChange={(value) => handleChange("recurrence_frequency", value)}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select frequency" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="daily">Daily</SelectItem>
+                      <SelectItem value="weekly">Weekly</SelectItem>
+                      <SelectItem value="biweekly">Bi-weekly</SelectItem>
+                      <SelectItem value="monthly">Monthly</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <p className="text-xs text-muted-foreground">
+                    {formData.is_recurring
+                      ? "This meeting can be run multiple times and will stay open after sending summaries."
+                      : "This meeting will be closed automatically after sending the summary."}
+                  </p>
+                </div>
+              )}
             </div>
           </div>
           <DialogFooter>
