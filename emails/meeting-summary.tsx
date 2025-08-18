@@ -4,10 +4,13 @@ interface MeetingSummaryProps {
   meetingTitle: string
   meetingDate: string
   discussionItems: Array<{ title: string; description?: string }>
-  todos: Array<{ title: string; assigned_to_email: string; due_date?: string }>
+  todos: Array<{ title: string; assigned_email: string; due_date?: string }>
 }
 
 export default function MeetingSummary({ meetingTitle, meetingDate, discussionItems, todos }: MeetingSummaryProps) {
+  const safeDiscussionItems = discussionItems || []
+  const safeTodos = todos || []
+
   return (
     <Html>
       <Head />
@@ -24,11 +27,11 @@ export default function MeetingSummary({ meetingTitle, meetingDate, discussionIt
             </Text>
           </Section>
 
-          {discussionItems.length > 0 && (
+          {safeDiscussionItems.length > 0 && (
             <Section>
               <Heading style={h3}>Items Discussed</Heading>
-              {discussionItems.map((item, index) => (
-                <Section key={index} style={listItem}>
+              {safeDiscussionItems.map((item, index) => (
+                <Section key={`discussion-${item.title}-${index}`} style={listItem}>
                   <Text style={itemTitle}>{item.title}</Text>
                   {item.description && <Text style={itemDescription}>{item.description}</Text>}
                 </Section>
@@ -36,13 +39,13 @@ export default function MeetingSummary({ meetingTitle, meetingDate, discussionIt
             </Section>
           )}
 
-          {todos.length > 0 && (
+          {safeTodos.length > 0 && (
             <Section>
               <Heading style={h3}>Action Items</Heading>
-              {todos.map((todo, index) => (
-                <Section key={index} style={listItem}>
+              {safeTodos.map((todo, index) => (
+                <Section key={`todo-${todo.title}-${index}`} style={listItem}>
                   <Text style={itemTitle}>{todo.title}</Text>
-                  <Text style={itemDescription}>Assigned to: {todo.assigned_to_email}</Text>
+                  <Text style={itemDescription}>Assigned to: {todo.assigned_email}</Text>
                   {todo.due_date && <Text style={itemDescription}>Due: {todo.due_date}</Text>}
                 </Section>
               ))}

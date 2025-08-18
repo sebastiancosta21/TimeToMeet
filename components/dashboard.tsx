@@ -10,6 +10,7 @@ import CreateMeetingDialog from "@/components/create-meeting-dialog"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import type { User as SupabaseUser } from "@supabase/supabase-js"
+import TaskDetailDialog from "@/components/task-detail-dialog"
 
 interface Meeting {
   id: string
@@ -20,7 +21,7 @@ interface Meeting {
   duration_minutes: number
   location: string
   created_at: string
-  is_recurring?: boolean
+  status: "open" | "closed" | "recurring"
 }
 
 interface Todo {
@@ -29,7 +30,6 @@ interface Todo {
   description: string
   due_date: string | null
   status: "pending" | "completed"
-  priority: "low" | "medium" | "high"
   meeting_id: string
   assigned_to: string
   created_by: string
@@ -47,6 +47,8 @@ export default function Dashboard({ user }: DashboardProps) {
   const [todos, setTodos] = useState<Todo[]>([])
   const [loading, setLoading] = useState(true)
   const [showCreateDialog, setShowCreateDialog] = useState(false)
+  const [selectedTask, setSelectedTask] = useState<Todo | null>(null)
+  const [showTaskDialog, setShowTaskDialog] = useState(false)
   const router = useRouter()
 
   useEffect(() => {
@@ -60,6 +62,7 @@ export default function Dashboard({ user }: DashboardProps) {
         .from("meetings")
         .select("*")
         .gte("scheduled_date", new Date().toISOString().split("T")[0])
+        .neq("status", "closed")
         .order("scheduled_date", { ascending: true })
         .limit(5)
 
@@ -125,17 +128,14 @@ export default function Dashboard({ user }: DashboardProps) {
     }
   }
 
-  const getPriorityColor = (priority: string) => {
-    switch (priority) {
-      case "high":
-        return "border-l-red-500"
-      case "medium":
-        return "border-l-yellow-500"
-      case "low":
-        return "border-l-green-500"
-      default:
-        return "border-l-gray-300"
-    }
+  const handleTaskClick = (task: Todo) => {
+    setSelectedTask(task)
+    setShowTaskDialog(true)
+  }
+
+  const handleTaskUpdated = () => {
+    fetchTodos()
+    setSelectedTask(null)
   }
 
   return (
@@ -196,43 +196,57 @@ export default function Dashboard({ user }: DashboardProps) {
                 </CardContent>
               </Card>
             ) : (
-              <div className="space-y-3">
-                {todos.map((todo) => {
-                  const dueDateInfo = formatDueDate(todo.due_date)
-                  return (
-                    <Card
-                      key={todo.id}
-                      className={`border-l-4 ${getPriorityColor(todo.priority)} hover:shadow-md transition-shadow`}
-                    >
-                      <CardContent className="p-4">
-                        <div className="flex items-start justify-between">
-                          <div className="flex-1">
-                            <h4 className="font-semibold text-foreground mb-1">{todo.title}</h4>
-                            {todo.description && (
-                              <p className="text-sm text-muted-foreground mb-2">{todo.description}</p>
-                            )}
-                            <div className="flex items-center gap-4 text-xs text-muted-foreground">
-                              <span className="flex items-center">
-                                <Calendar className="h-3 w-3 mr-1" />
-                                {todo.meetings?.title}
-                              </span>
-                              <span className="capitalize px-2 py-1 rounded-full bg-muted">{todo.priority}</span>
+              <Card>
+                <CardContent className="p-0">
+                  <div className="overflow-hidden">
+                    {/* Table Header */}
+                    <div className="grid grid-cols-12 gap-4 p-4 bg-muted/50 border-b text-sm font-medium text-muted-foreground">
+                      <div className="col-span-6">Task</div>
+                      <div className="col-span-4">Meeting</div>
+                      <div className="col-span-2">Due Date</div>
+                    </div>
+
+                    {/* Task Rows */}
+                    <div className="divide-y">
+                      {todos.map((todo) => {
+                        const dueDateInfo = formatDueDate(todo.due_date)
+                        return (
+                          <div
+                            key={todo.id}
+                            onClick={() => handleTaskClick(todo)}
+                            className="grid grid-cols-12 gap-4 p-4 hover:bg-muted/50 cursor-pointer transition-colors border-l-4 border-l-primary/20"
+                          >
+                            <div className="col-span-6">
+                              <div className="font-medium text-foreground truncate">{todo.title}</div>
+                              {todo.description && (
+                                <div className="text-sm text-muted-foreground truncate mt-1">{todo.description}</div>
+                              )}
+                            </div>
+
+                            <div className="col-span-4 flex items-center">
+                              <Calendar className="h-3 w-3 mr-2 text-muted-foreground" />
+                              <span className="text-sm text-muted-foreground truncate">{todo.meetings?.title}</span>
+                            </div>
+
+                            <div className="col-span-2 flex items-center">
+                              {dueDateInfo && (
+                                <div
+                                  className={`text-xs px-2 py-1 rounded flex items-center ${
+                                    dueDateInfo.isOverdue ? "bg-red-100 text-red-700" : "bg-gray-100 text-gray-700"
+                                  }`}
+                                >
+                                  <Clock className="h-3 w-3 mr-1" />
+                                  {dueDateInfo.text}
+                                </div>
+                              )}
                             </div>
                           </div>
-                          {dueDateInfo && (
-                            <div
-                              className={`text-xs px-2 py-1 rounded ${dueDateInfo.isOverdue ? "bg-red-100 text-red-700" : "bg-gray-100 text-gray-700"}`}
-                            >
-                              <Clock className="h-3 w-3 inline mr-1" />
-                              {dueDateInfo.text}
-                            </div>
-                          )}
-                        </div>
-                      </CardContent>
-                    </Card>
-                  )
-                })}
-              </div>
+                        )
+                      })}
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
             )}
           </div>
 
@@ -266,7 +280,7 @@ export default function Dashboard({ user }: DashboardProps) {
                       <CardContent className="p-4">
                         <div className="flex items-start justify-between mb-2">
                           <h4 className="font-semibold text-foreground text-sm">{meeting.title}</h4>
-                          {meeting.is_recurring && (
+                          {meeting.status === "recurring" && (
                             <span className="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded-full">Recurring</span>
                           )}
                         </div>
@@ -300,6 +314,15 @@ export default function Dashboard({ user }: DashboardProps) {
         open={showCreateDialog}
         onOpenChange={setShowCreateDialog}
         onMeetingCreated={fetchMeetings}
+      />
+
+      <TaskDetailDialog
+        task={selectedTask}
+        open={showTaskDialog}
+        onOpenChange={setShowTaskDialog}
+        onTaskUpdated={handleTaskUpdated}
+        onTaskDeleted={handleTaskUpdated}
+        currentUserId={user.id}
       />
     </div>
   )

@@ -8,10 +8,10 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { ArrowLeft, Calendar, Clock, MapPin, Save, StopCircle } from "lucide-react"
+import { ArrowLeft, Calendar, Clock, MapPin, Save, X } from "lucide-react"
 import { supabase } from "@/lib/supabase/client"
 import { Loader2 } from "lucide-react"
-import { endMeeting } from "@/lib/actions"
+import { closeMeeting } from "@/lib/actions"
 
 interface Meeting {
   id: string
@@ -36,7 +36,7 @@ interface MeetingSettingsProps {
 
 export default function MeetingSettings({ meeting, onBack, onMeetingUpdated, isCreator }: MeetingSettingsProps) {
   const [loading, setLoading] = useState(false)
-  const [endingMeeting, setEndingMeeting] = useState(false)
+  const [closingMeeting, setClosingMeeting] = useState(false)
   const [formData, setFormData] = useState({
     title: meeting.title,
     description: meeting.description || "",
@@ -66,27 +66,27 @@ export default function MeetingSettings({ meeting, onBack, onMeetingUpdated, isC
     }
   }
 
-  const handleEndMeeting = async () => {
-    if (!isCreator || meeting.status === "ended") return
+  const handleCloseMeeting = async () => {
+    if (!isCreator) return
 
-    setEndingMeeting(true)
+    setClosingMeeting(true)
 
     try {
-      const result = await endMeeting(meeting.id)
+      const result = await closeMeeting(meeting.id)
 
       if (result.error) {
-        console.error("Error ending meeting:", result.error)
-        alert("Failed to end meeting: " + result.error)
+        console.error("Error closing meeting:", result.error)
+        alert("Failed to close meeting: " + result.error)
       } else {
-        alert("Meeting ended successfully! Summary emails have been sent to all participants.")
+        alert("Meeting closed successfully! It will no longer appear in your upcoming meetings list.")
         onMeetingUpdated()
         onBack()
       }
     } catch (error) {
-      console.error("Error ending meeting:", error)
-      alert("Failed to end meeting. Please try again.")
+      console.error("Error closing meeting:", error)
+      alert("Failed to close meeting. Please try again.")
     } finally {
-      setEndingMeeting(false)
+      setClosingMeeting(false)
     }
   }
 
@@ -111,8 +111,6 @@ export default function MeetingSettings({ meeting, onBack, onMeetingUpdated, isC
     })
   }
 
-  const isEnded = meeting.status === "ended"
-
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
@@ -126,17 +124,17 @@ export default function MeetingSettings({ meeting, onBack, onMeetingUpdated, isC
               </Button>
               <h1 className="text-xl font-bold font-work-sans text-foreground">Meeting Settings</h1>
             </div>
-            {isCreator && !isEnded && (
-              <Button variant="destructive" size="sm" onClick={handleEndMeeting} disabled={endingMeeting}>
-                {endingMeeting ? (
+            {isCreator && (
+              <Button variant="destructive" size="sm" onClick={handleCloseMeeting} disabled={closingMeeting}>
+                {closingMeeting ? (
                   <>
                     <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                    Ending Meeting...
+                    Closing Meeting...
                   </>
                 ) : (
                   <>
-                    <StopCircle className="h-4 w-4 mr-2" />
-                    End Meeting
+                    <X className="h-4 w-4 mr-2" />
+                    Close Meeting
                   </>
                 )}
               </Button>
@@ -159,17 +157,6 @@ export default function MeetingSettings({ meeting, onBack, onMeetingUpdated, isC
                 <CardDescription>Current meeting schedule</CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
-                {isEnded && (
-                  <div className="flex items-center gap-3 p-3 bg-red-50 border border-red-200 rounded-lg">
-                    <StopCircle className="h-4 w-4 text-red-600" />
-                    <div>
-                      <div className="font-medium text-sm text-red-800">Meeting Ended</div>
-                      <div className="text-xs text-red-600">
-                        {meeting.ended_at && new Date(meeting.ended_at).toLocaleString()}
-                      </div>
-                    </div>
-                  </div>
-                )}
                 <div className="flex items-center gap-3 p-3 bg-muted rounded-lg">
                   <Calendar className="h-4 w-4 text-primary" />
                   <div>
@@ -198,30 +185,35 @@ export default function MeetingSettings({ meeting, onBack, onMeetingUpdated, isC
               </CardContent>
             </Card>
 
-            {isCreator && !isEnded && (
+            {isCreator && (
               <Card className="mt-6">
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2 font-work-sans text-red-600">
-                    <StopCircle className="h-5 w-5" />
-                    End Meeting
+                    <X className="h-5 w-5" />
+                    Close Meeting
                   </CardTitle>
-                  <CardDescription>End this meeting and send a summary to all participants</CardDescription>
+                  <CardDescription>Remove this meeting from your upcoming meetings list</CardDescription>
                 </CardHeader>
                 <CardContent>
                   <p className="text-sm text-muted-foreground mb-4">
-                    This will mark the meeting as ended and automatically send an email summary containing completed
-                    discussion items and action items to all participants.
+                    This will close the meeting and remove it from your upcoming meetings list. The meeting data will be
+                    preserved but it won't appear in your active meetings.
                   </p>
-                  <Button variant="destructive" onClick={handleEndMeeting} disabled={endingMeeting} className="w-full">
-                    {endingMeeting ? (
+                  <Button
+                    variant="destructive"
+                    onClick={handleCloseMeeting}
+                    disabled={closingMeeting}
+                    className="w-full"
+                  >
+                    {closingMeeting ? (
                       <>
                         <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                        Ending Meeting & Sending Summary...
+                        Closing Meeting...
                       </>
                     ) : (
                       <>
-                        <StopCircle className="h-4 w-4 mr-2" />
-                        End Meeting & Send Summary
+                        <X className="h-4 w-4 mr-2" />
+                        Close Meeting
                       </>
                     )}
                   </Button>
@@ -236,7 +228,7 @@ export default function MeetingSettings({ meeting, onBack, onMeetingUpdated, isC
               <CardHeader>
                 <CardTitle className="font-work-sans">Meeting Details</CardTitle>
                 <CardDescription>
-                  {isCreator && !isEnded ? "Update your meeting information" : "View meeting information (read-only)"}
+                  {isCreator ? "Update your meeting information" : "View meeting information (read-only)"}
                 </CardDescription>
               </CardHeader>
               <CardContent>
@@ -248,7 +240,7 @@ export default function MeetingSettings({ meeting, onBack, onMeetingUpdated, isC
                         id="title"
                         value={formData.title}
                         onChange={(e) => handleChange("title", e.target.value)}
-                        disabled={!isCreator || isEnded}
+                        disabled={!isCreator}
                         required
                       />
                     </div>
@@ -259,7 +251,7 @@ export default function MeetingSettings({ meeting, onBack, onMeetingUpdated, isC
                         id="description"
                         value={formData.description}
                         onChange={(e) => handleChange("description", e.target.value)}
-                        disabled={!isCreator || isEnded}
+                        disabled={!isCreator}
                         rows={3}
                         placeholder="Brief description of the meeting purpose"
                       />
@@ -273,7 +265,7 @@ export default function MeetingSettings({ meeting, onBack, onMeetingUpdated, isC
                           type="date"
                           value={formData.scheduled_date}
                           onChange={(e) => handleChange("scheduled_date", e.target.value)}
-                          disabled={!isCreator || isEnded}
+                          disabled={!isCreator}
                           required
                         />
                       </div>
@@ -284,7 +276,7 @@ export default function MeetingSettings({ meeting, onBack, onMeetingUpdated, isC
                           type="time"
                           value={formData.scheduled_time}
                           onChange={(e) => handleChange("scheduled_time", e.target.value)}
-                          disabled={!isCreator || isEnded}
+                          disabled={!isCreator}
                           required
                         />
                       </div>
@@ -298,7 +290,7 @@ export default function MeetingSettings({ meeting, onBack, onMeetingUpdated, isC
                           type="number"
                           value={formData.duration_minutes}
                           onChange={(e) => handleChange("duration_minutes", Number.parseInt(e.target.value))}
-                          disabled={!isCreator || isEnded}
+                          disabled={!isCreator}
                           min="15"
                           step="15"
                         />
@@ -309,13 +301,13 @@ export default function MeetingSettings({ meeting, onBack, onMeetingUpdated, isC
                           id="location"
                           value={formData.location}
                           onChange={(e) => handleChange("location", e.target.value)}
-                          disabled={!isCreator || isEnded}
+                          disabled={!isCreator}
                           placeholder="Conference Room A"
                         />
                       </div>
                     </div>
 
-                    {isCreator && !isEnded && (
+                    {isCreator && (
                       <div className="flex justify-end gap-3 pt-4">
                         <Button type="button" variant="outline" onClick={onBack}>
                           Cancel

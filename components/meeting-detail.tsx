@@ -14,7 +14,7 @@ import {
   Clock,
   MapPin,
   FileText,
-  StopCircle,
+  Send,
 } from "lucide-react"
 import { supabase } from "@/lib/supabase/client"
 import Link from "next/link"
@@ -24,7 +24,7 @@ import ParticipantsTab from "@/components/participants-tab"
 import TodosTab from "@/components/todos-tab"
 import DiscussionItemsTab from "@/components/discussion-items-tab"
 import MeetingSummaryTab from "@/components/meeting-summary-tab"
-import { endMeeting } from "@/lib/actions"
+import { sendMeetingSummary } from "@/lib/actions"
 import { Loader2 } from "lucide-react"
 
 interface Meeting {
@@ -54,22 +54,30 @@ export default function MeetingDetail({ meeting, user, isCreator }: MeetingDetai
   const [participants, setParticipants] = useState([])
   const [todos, setTodos] = useState([])
   const [discussionItems, setDiscussionItems] = useState([])
-  const [endingMeeting, setEndingMeeting] = useState(false)
-  const [currentMeeting, setCurrentMeeting] = useState(meeting)
+  const [sendingSummary, setSendingSummary] = useState(false)
+  const [meetingData, setMeetingData] = useState({
+    status: meeting.status || "scheduled",
+    is_recurring: meeting.is_recurring || false,
+  })
 
   useEffect(() => {
     fetchMeetingData()
   }, [meeting.id])
 
   const fetchMeetingData = async () => {
-    // Fetch updated meeting data
-    const { data: meetingData } = await supabase.from("meetings").select("*").eq("id", meeting.id).single()
+    const { data: meetingUpdate } = await supabase
+      .from("meetings")
+      .select("status, is_recurring")
+      .eq("id", meeting.id)
+      .single()
 
-    if (meetingData) {
-      setCurrentMeeting(meetingData)
+    if (meetingUpdate) {
+      setMeetingData({
+        status: meetingUpdate.status || "scheduled",
+        is_recurring: meetingUpdate.is_recurring || false,
+      })
     }
 
-    // Fetch participants
     const { data: participantsData } = await supabase
       .from("meeting_participants")
       .select(`
@@ -82,7 +90,6 @@ export default function MeetingDetail({ meeting, user, isCreator }: MeetingDetai
       `)
       .eq("meeting_id", meeting.id)
 
-    // Fetch todos
     const { data: todosData } = await supabase
       .from("todos")
       .select(`
@@ -101,7 +108,6 @@ export default function MeetingDetail({ meeting, user, isCreator }: MeetingDetai
       .eq("meeting_id", meeting.id)
       .order("created_at", { ascending: false })
 
-    // Fetch discussion items
     const { data: discussionData } = await supabase
       .from("discussion_items")
       .select(`
@@ -121,30 +127,23 @@ export default function MeetingDetail({ meeting, user, isCreator }: MeetingDetai
     setDiscussionItems(discussionData || [])
   }
 
-  const handleEndMeeting = async () => {
-    if (!isCreator || (currentMeeting.status === "ended" && !currentMeeting.is_recurring)) return
-
-    setEndingMeeting(true)
+  const handleSendSummary = async () => {
+    setSendingSummary(true)
 
     try {
-      const result = await endMeeting(meeting.id)
+      const result = await sendMeetingSummary(meeting.id)
 
       if (result.error) {
-        console.error("Error ending meeting:", result.error)
-        alert("Failed to end meeting: " + result.error)
+        console.error("Error sending summary:", result.error)
+        alert("Failed to send summary: " + result.error)
       } else {
-        if (result.isRecurring) {
-          alert("Meeting summary sent successfully! This recurring meeting is ready to be run again.")
-        } else {
-          alert("Meeting ended successfully! Summary emails have been sent to all participants.")
-        }
-        fetchMeetingData() // Refresh meeting data
+        alert("Meeting summary sent successfully to all participants!")
       }
     } catch (error) {
-      console.error("Error ending meeting:", error)
-      alert("Failed to end meeting. Please try again.")
+      console.error("Error sending summary:", error)
+      alert("Failed to send summary. Please try again.")
     } finally {
-      setEndingMeeting(false)
+      setSendingSummary(false)
     }
   }
 
@@ -167,7 +166,12 @@ export default function MeetingDetail({ meeting, user, isCreator }: MeetingDetai
 
   const pendingTodos = todos.filter((todo: any) => todo.status === "pending")
   const completedTodos = todos.filter((todo: any) => todo.status === "done")
-  const isEnded = currentMeeting.status === "ended" && !currentMeeting.is_recurring
+
+  const currentMeeting = {
+    ...meeting,
+    status: meetingData.status,
+    is_recurring: meetingData.is_recurring,
+  }
 
   if (showSettings) {
     return (
@@ -182,7 +186,6 @@ export default function MeetingDetail({ meeting, user, isCreator }: MeetingDetai
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Header */}
       <header className="border-b border-border bg-card">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
@@ -201,27 +204,22 @@ export default function MeetingDetail({ meeting, user, isCreator }: MeetingDetai
                       Recurring
                     </Badge>
                   )}
-                  {isEnded && (
-                    <Badge variant="secondary" className="bg-red-100 text-red-800">
-                      Ended
-                    </Badge>
-                  )}
                 </div>
                 <p className="text-sm text-muted-foreground">{currentMeeting.description}</p>
               </div>
             </div>
             <div className="flex items-center gap-2">
-              {isCreator && !isEnded && (
-                <Button variant="destructive" size="sm" onClick={handleEndMeeting} disabled={endingMeeting}>
-                  {endingMeeting ? (
+              {isCreator && (
+                <Button variant="default" size="sm" onClick={handleSendSummary} disabled={sendingSummary}>
+                  {sendingSummary ? (
                     <>
                       <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                      {currentMeeting.is_recurring ? "Sending..." : "Ending..."}
+                      Sending...
                     </>
                   ) : (
                     <>
-                      <StopCircle className="h-4 w-4 mr-2" />
-                      {currentMeeting.is_recurring ? "Send Summary" : "End Meeting"}
+                      <Send className="h-4 w-4 mr-2" />
+                      Submit Meeting Summary
                     </>
                   )}
                 </Button>
@@ -235,7 +233,6 @@ export default function MeetingDetail({ meeting, user, isCreator }: MeetingDetai
         </div>
       </header>
 
-      {/* Meeting Info Banner */}
       <div className="bg-primary/5 border-b border-border">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
           <div className="flex flex-wrap items-center gap-6 text-sm">
@@ -257,17 +254,10 @@ export default function MeetingDetail({ meeting, user, isCreator }: MeetingDetai
               <Users className="h-4 w-4 mr-2 text-primary" />
               {participants.length} participant{participants.length !== 1 ? "s" : ""}
             </div>
-            {isEnded && currentMeeting.ended_at && (
-              <div className="flex items-center text-red-600">
-                <StopCircle className="h-4 w-4 mr-2" />
-                Ended {new Date(currentMeeting.ended_at).toLocaleString()}
-              </div>
-            )}
           </div>
         </div>
       </div>
 
-      {/* Main Content */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
           <TabsList className="grid w-full grid-cols-4">
