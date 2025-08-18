@@ -1,39 +1,31 @@
 "use client"
 
 import type React from "react"
-
 import { useState } from "react"
+import { createClient } from "@/lib/supabase/client"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Loader2, Calendar } from "lucide-react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
-import { createClient } from "@/lib/supabase/client"
 
 export default function LoginForm() {
-  const router = useRouter()
-  const [isLoading, setIsLoading] = useState(false)
+  const [isPending, setIsPending] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const router = useRouter()
+  const supabase = createClient()
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
-    setIsLoading(true)
+    setIsPending(true)
     setError(null)
 
     const formData = new FormData(e.currentTarget)
     const email = formData.get("email") as string
     const password = formData.get("password") as string
 
-    if (!email || !password) {
-      setError("Email and password are required")
-      setIsLoading(false)
-      return
-    }
-
     try {
-      const supabase = createClient()
-
       const { error: signInError } = await supabase.auth.signInWithPassword({
         email,
         password,
@@ -41,15 +33,15 @@ export default function LoginForm() {
 
       if (signInError) {
         setError(signInError.message)
-        setIsLoading(false)
-        return
+      } else {
+        console.log("[v0] Login successful, redirecting to dashboard")
+        router.push("/")
+        router.refresh()
       }
-
-      router.push("/")
-      router.refresh()
     } catch (err) {
       setError("An unexpected error occurred")
-      setIsLoading(false)
+    } finally {
+      setIsPending(false)
     }
   }
 
@@ -94,10 +86,10 @@ export default function LoginForm() {
 
           <Button
             type="submit"
-            disabled={isLoading}
+            disabled={isPending}
             className="w-full bg-primary hover:bg-primary/90 text-primary-foreground"
           >
-            {isLoading ? (
+            {isPending ? (
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                 Signing in...
