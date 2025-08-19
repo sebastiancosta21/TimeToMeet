@@ -13,20 +13,46 @@ export default function ResetPasswordPage() {
   const [isPending, setIsPending] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState(false)
+  const [isValidSession, setIsValidSession] = useState<boolean | null>(null)
   const router = useRouter()
   const searchParams = useSearchParams()
   const supabase = createClient()
 
   useEffect(() => {
-    // Handle the auth callback from the email link
-    const handleAuthCallback = async () => {
-      const { data, error } = await supabase.auth.getSession()
-      if (error) {
-        setError("Invalid or expired reset link")
+    const validateSession = async () => {
+      try {
+        const { data, error } = await supabase.auth.getSession()
+
+        if (error) {
+          console.error("Session validation error:", error)
+          setError("Invalid or expired reset link")
+          setIsValidSession(false)
+          return
+        }
+
+        if (!data.session) {
+          setError("No active session found. Please request a new password reset link.")
+          setIsValidSession(false)
+          return
+        }
+
+        // Check if user has the recovery role (indicates password reset flow)
+        const user = data.session.user
+        if (!user) {
+          setError("Invalid session. Please request a new password reset link.")
+          setIsValidSession(false)
+          return
+        }
+
+        setIsValidSession(true)
+      } catch (err) {
+        console.error("Unexpected error during session validation:", err)
+        setError("An unexpected error occurred. Please try again.")
+        setIsValidSession(false)
       }
     }
 
-    handleAuthCallback()
+    validateSession()
   }, [supabase.auth])
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -68,6 +94,48 @@ export default function ResetPasswordPage() {
     } finally {
       setIsPending(false)
     }
+  }
+
+  if (isValidSession === null) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <div className="text-center space-y-4">
+          <div className="flex items-center justify-center mb-4">
+            <Calendar className="h-8 w-8 text-primary mr-2" />
+            <span className="text-2xl font-bold font-work-sans text-foreground">MeetingHub</span>
+          </div>
+          <Loader2 className="h-8 w-8 animate-spin mx-auto text-primary" />
+          <p className="text-muted-foreground">Validating reset link...</p>
+        </div>
+      </div>
+    )
+  }
+
+  if (isValidSession === false) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background p-4">
+        <Card className="w-full max-w-md">
+          <CardHeader className="text-center">
+            <div className="flex items-center justify-center mb-4">
+              <Calendar className="h-8 w-8 text-primary mr-2" />
+              <span className="text-2xl font-bold font-work-sans text-foreground">MeetingHub</span>
+            </div>
+            <CardTitle className="text-2xl font-work-sans">Reset Link Invalid</CardTitle>
+            <CardDescription>{error || "The password reset link is invalid or has expired."}</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="text-center">
+              <Button
+                onClick={() => router.push("/auth/forgot-password")}
+                className="w-full bg-primary hover:bg-primary/90 text-primary-foreground"
+              >
+                Request New Reset Link
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    )
   }
 
   if (success) {

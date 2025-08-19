@@ -24,9 +24,22 @@ export default function ForgotPasswordPage() {
     const email = formData.get("email") as string
 
     try {
-      const redirectUrl =
-        process.env.NEXT_PUBLIC_DEV_SUPABASE_REDIRECT_URL ||
-        `${process.env.NEXT_PUBLIC_SITE_URL || "https://your-production-domain.com"}/auth/reset-password`
+      const getRedirectUrl = () => {
+        if (process.env.NEXT_PUBLIC_DEV_SUPABASE_REDIRECT_URL) {
+          return process.env.NEXT_PUBLIC_DEV_SUPABASE_REDIRECT_URL
+        }
+
+        // For production, construct URL from current location
+        if (typeof window !== "undefined") {
+          const origin = window.location.origin
+          return `${origin}/auth/reset-password`
+        }
+
+        // Fallback for server-side rendering
+        return `https://${process.env.VERCEL_URL || "localhost:3000"}/auth/reset-password`
+      }
+
+      const redirectUrl = getRedirectUrl()
 
       const { error: resetError } = await supabase.auth.resetPasswordForEmail(email, {
         redirectTo: redirectUrl,
