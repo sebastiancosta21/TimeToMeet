@@ -39,31 +39,43 @@ export async function signIn(prevState: any, formData: FormData) {
   }
 }
 
-export async function signUp(formData: FormData) {
-  const email = formData.get("email") as string
-  const password = formData.get("password") as string
+export async function signUp(prevState: any, formData: FormData) {
+  console.log("[v0] SignUp function called")
 
-  if (!email || !password) {
-    return { error: "Email and password are required" }
+  try {
+    const email = formData.get("email") as string
+    const password = formData.get("password") as string
+
+    console.log("[v0] Email:", email)
+
+    if (!email || !password) {
+      console.log("[v0] Missing email or password")
+      return { error: "Email and password are required" }
+    }
+
+    const supabase = createClient()
+    const { error } = await supabase.auth.signUp({
+      email,
+      password,
+      options: {
+        emailRedirectTo:
+          process.env.NEXT_PUBLIC_DEV_SUPABASE_REDIRECT_URL ||
+          `${process.env.VERCEL_URL || "http://localhost:3000"}/auth/callback`,
+      },
+    })
+
+    if (error) {
+      console.log("[v0] SignUp error:", error.message)
+      return { error: error.message }
+    }
+
+    console.log("[v0] SignUp successful")
+    revalidatePath("/", "layout")
+    redirect("/auth/login?message=Check your email to continue sign in process")
+  } catch (error) {
+    console.log("[v0] SignUp error:", error)
+    return { error: "An unexpected error occurred" }
   }
-
-  const supabase = createClient()
-  const { error } = await supabase.auth.signUp({
-    email,
-    password,
-    options: {
-      emailRedirectTo:
-        process.env.NEXT_PUBLIC_DEV_SUPABASE_REDIRECT_URL ||
-        `${process.env.VERCEL_URL || "http://localhost:3000"}/auth/callback`,
-    },
-  })
-
-  if (error) {
-    return { error: error.message }
-  }
-
-  revalidatePath("/", "layout")
-  redirect("/auth/login?message=Check your email to continue sign in process")
 }
 
 export async function signOut() {
