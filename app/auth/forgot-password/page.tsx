@@ -25,21 +25,41 @@ export default function ForgotPasswordPage() {
 
     try {
       const getRedirectUrl = () => {
+        // For development with explicit dev URL
         if (process.env.NEXT_PUBLIC_DEV_SUPABASE_REDIRECT_URL) {
+          console.log("[v0] Using dev redirect URL:", process.env.NEXT_PUBLIC_DEV_SUPABASE_REDIRECT_URL)
           return process.env.NEXT_PUBLIC_DEV_SUPABASE_REDIRECT_URL
         }
 
-        // For production, construct URL from current location
-        if (typeof window !== "undefined") {
-          const origin = window.location.origin
-          return `${origin}/auth/reset-password`
+        // For production deployment on Vercel
+        if (process.env.VERCEL_URL && !process.env.VERCEL_URL.includes("localhost")) {
+          const productionUrl = `https://${process.env.VERCEL_URL}/auth/reset-password`
+          console.log("[v0] Using Vercel production URL:", productionUrl)
+          return productionUrl
         }
 
-        // Fallback for server-side rendering
-        return `https://${process.env.VERCEL_URL || "localhost:3000"}/auth/reset-password`
+        // For client-side in production (when VERCEL_URL is not available)
+        if (typeof window !== "undefined") {
+          const origin = window.location.origin
+          // Only use localhost if we're actually in development
+          if (origin.includes("localhost") || origin.includes("127.0.0.1")) {
+            console.log("[v0] Using localhost URL:", `${origin}/auth/reset-password`)
+            return `${origin}/auth/reset-password`
+          } else {
+            // Production domain
+            console.log("[v0] Using production origin URL:", `${origin}/auth/reset-password`)
+            return `${origin}/auth/reset-password`
+          }
+        }
+
+        // Final fallback
+        const fallbackUrl = "https://localhost:3000/auth/reset-password"
+        console.log("[v0] Using fallback URL:", fallbackUrl)
+        return fallbackUrl
       }
 
       const redirectUrl = getRedirectUrl()
+      console.log("[v0] Final redirect URL being sent to Supabase:", redirectUrl)
 
       const { error: resetError } = await supabase.auth.resetPasswordForEmail(email, {
         redirectTo: redirectUrl,
