@@ -99,6 +99,12 @@ export default function LoginForm() {
             )}
           </Button>
 
+          <div className="text-center text-sm">
+            <Link href="/auth/forgot-password" className="text-primary hover:text-primary/80 font-medium">
+              Forgot your password?
+            </Link>
+          </div>
+
           <div className="text-center text-sm text-muted-foreground">
             Don't have an account?{" "}
             <Link href="/auth/sign-up" className="text-primary hover:text-primary/80 font-medium">

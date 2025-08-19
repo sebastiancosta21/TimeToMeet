@@ -54,13 +54,27 @@ export async function signUp(prevState: any, formData: FormData) {
     }
 
     const supabase = createClient()
+
+    const getRedirectUrl = () => {
+      // For development, use the dev environment variable
+      if (process.env.NEXT_PUBLIC_DEV_SUPABASE_REDIRECT_URL) {
+        return process.env.NEXT_PUBLIC_DEV_SUPABASE_REDIRECT_URL
+      }
+
+      // For production, construct the URL properly
+      if (process.env.VERCEL_URL) {
+        return `https://${process.env.VERCEL_URL}/auth/callback`
+      }
+
+      // Fallback to localhost for local development
+      return "http://localhost:3000/auth/callback"
+    }
+
     const { error } = await supabase.auth.signUp({
       email,
       password,
       options: {
-        emailRedirectTo:
-          process.env.NEXT_PUBLIC_DEV_SUPABASE_REDIRECT_URL ||
-          `${process.env.VERCEL_URL || "http://localhost:3000"}/auth/callback`,
+        emailRedirectTo: getRedirectUrl(),
       },
     })
 
