@@ -37,6 +37,7 @@ interface Todo {
   meetings: {
     title: string
   }
+  order_index?: number // Added optional order_index field
 }
 
 interface DashboardProps {
@@ -50,12 +51,27 @@ export default function Dashboard({ user }: DashboardProps) {
   const [showCreateDialog, setShowCreateDialog] = useState(false)
   const [selectedTask, setSelectedTask] = useState<Todo | null>(null)
   const [showTaskDialog, setShowTaskDialog] = useState(false)
+  const [orderingEnabled, setOrderingEnabled] = useState(false)
   const router = useRouter()
 
   useEffect(() => {
+    checkOrderingSupport()
     fetchMeetings()
-    fetchTodos()
   }, [])
+
+  const checkOrderingSupport = async () => {
+    try {
+      const { error: testError } = await supabase.from("todos").select("order_index").limit(1)
+      setOrderingEnabled(!testError)
+
+      // Fetch todos after determining ordering support
+      fetchTodos(!testError)
+    } catch (error) {
+      console.log("Order index column not available")
+      setOrderingEnabled(false)
+      fetchTodos(false)
+    }
+  }
 
   const fetchMeetings = async () => {
     try {
@@ -76,9 +92,9 @@ export default function Dashboard({ user }: DashboardProps) {
     }
   }
 
-  const fetchTodos = async () => {
+  const fetchTodos = async (useOrdering = orderingEnabled) => {
     try {
-      const { data, error } = await supabase
+      let query = supabase
         .from("todos")
         .select(`
           *,
@@ -88,7 +104,14 @@ export default function Dashboard({ user }: DashboardProps) {
         `)
         .eq("assigned_to", user.id)
         .eq("status", "pending")
-        .order("due_date", { ascending: true, nullsFirst: false })
+
+      if (useOrdering) {
+        query = query.order("order_index", { ascending: true, nullsFirst: false })
+      }
+
+      query = query.order("due_date", { ascending: true, nullsFirst: false })
+
+      const { data, error } = await query
 
       if (error) {
         throw error
