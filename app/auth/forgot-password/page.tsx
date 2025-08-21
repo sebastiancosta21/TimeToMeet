@@ -31,29 +31,16 @@ export default function ForgotPasswordPage() {
           return process.env.NEXT_PUBLIC_DEV_SUPABASE_REDIRECT_URL
         }
 
-        // For production deployment on Vercel
-        if (process.env.VERCEL_URL && !process.env.VERCEL_URL.includes("localhost")) {
-          const productionUrl = `https://${process.env.VERCEL_URL}/auth/reset-password`
-          console.log("[v0] Using Vercel production URL:", productionUrl)
-          return productionUrl
-        }
-
-        // For client-side in production (when VERCEL_URL is not available)
+        // For client-side production detection
         if (typeof window !== "undefined") {
           const origin = window.location.origin
-          // Only use localhost if we're actually in development
-          if (origin.includes("localhost") || origin.includes("127.0.0.1")) {
-            console.log("[v0] Using localhost URL:", `${origin}/auth/reset-password`)
-            return `${origin}/auth/reset-password`
-          } else {
-            // Production domain
-            console.log("[v0] Using production origin URL:", `${origin}/auth/reset-password`)
-            return `${origin}/auth/reset-password`
-          }
+          const redirectUrl = `${origin}/auth/reset-password`
+          console.log("[v0] Using current origin URL:", redirectUrl)
+          return redirectUrl
         }
 
         // Final fallback
-        const fallbackUrl = "https://localhost:3000/auth/reset-password"
+        const fallbackUrl = "http://localhost:3000/auth/reset-password"
         console.log("[v0] Using fallback URL:", fallbackUrl)
         return fallbackUrl
       }

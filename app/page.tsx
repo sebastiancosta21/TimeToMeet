@@ -3,7 +3,6 @@ import { redirect } from "next/navigation"
 import Dashboard from "@/components/dashboard"
 
 export default async function Home() {
-  // If Supabase is not configured, show setup message directly
   if (!isSupabaseConfigured) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-background">
@@ -15,13 +14,28 @@ export default async function Home() {
     )
   }
 
-  // Get the user from the server
-  const supabase = createClient()
+  let supabase
+  try {
+    supabase = await createClient()
+  } catch (error) {
+    console.error("[v0] Error creating Supabase client:", error)
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-background">
+        <div className="text-center">
+          <h1 className="text-2xl font-bold mb-4 text-foreground">Configuration Error</h1>
+          <p className="text-muted-foreground">
+            There was an issue with the Supabase configuration. Please check your environment variables.
+          </p>
+        </div>
+      </div>
+    )
+  }
+
   const {
     data: { user },
   } = await supabase.auth.getUser()
 
-  // If no user, redirect to login
+  // If no user, redirect to login (this should not be caught by try-catch)
   if (!user) {
     redirect("/auth/login")
   }

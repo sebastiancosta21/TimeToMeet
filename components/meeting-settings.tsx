@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { ArrowLeft, Calendar, Clock, MapPin, Save, X, UserPlus, Mail, RotateCcw } from "lucide-react"
-import { supabase } from "@/lib/supabase/client"
+import { createClient } from "@/lib/supabase/client"
 import { Loader2 } from "lucide-react"
 import { closeMeeting, inviteParticipant } from "@/lib/actions"
 import { Badge } from "@/components/ui/badge"
@@ -43,6 +43,7 @@ export default function MeetingSettings({ meeting, onBack, onMeetingUpdated, isC
   const [invitingParticipant, setInvitingParticipant] = useState(false)
   const [resendingInvite, setResendingInvite] = useState<string | null>(null)
   const [currentUserEmail, setCurrentUserEmail] = useState<string>("")
+  const [supabase] = useState(() => createClient())
 
   useEffect(() => {
     fetchParticipants()
@@ -75,6 +76,12 @@ export default function MeetingSettings({ meeting, onBack, onMeetingUpdated, isC
 
   const getCurrentUser = async () => {
     try {
+      if (!supabase) {
+        console.error("[v0] Supabase client is undefined in getCurrentUser")
+        return
+      }
+
+      console.log("[v0] Getting current user with supabase client:", !!supabase.auth)
       const {
         data: { user },
       } = await supabase.auth.getUser()
@@ -137,6 +144,7 @@ export default function MeetingSettings({ meeting, onBack, onMeetingUpdated, isC
     setInvitingParticipant(true)
 
     try {
+      console.log("[v0] Starting participant invitation for:", newParticipantEmail.trim())
       const result = await inviteParticipant(meeting.id, newParticipantEmail.trim())
 
       if (result.error) {

@@ -21,7 +21,7 @@ export async function sendMeetingInvitation({
 }) {
   try {
     const { data, error } = await resend.emails.send({
-      from: "meetings@yourdomain.com", // Replace with your verified domain
+      from: "MeetingHub <noreply@resend.dev>",
       to: [to],
       subject: `Meeting Invitation: ${meetingTitle}`,
       html: `
@@ -77,7 +77,7 @@ export async function sendMeetingReminder({
 }) {
   try {
     const { data, error } = await resend.emails.send({
-      from: "meetings@yourdomain.com",
+      from: "MeetingHub <noreply@resend.dev>",
       to: [to],
       subject: `Reminder: ${meetingTitle} - Tomorrow`,
       html: `
@@ -127,7 +127,7 @@ export async function sendMeetingSummary({
 }) {
   try {
     const { data, error } = await resend.emails.send({
-      from: "meetings@yourdomain.com",
+      from: "MeetingHub <noreply@resend.dev>",
       to,
       subject: `Meeting Summary: ${meetingTitle}`,
       html: `

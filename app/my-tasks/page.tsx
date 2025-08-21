@@ -3,7 +3,7 @@ import { redirect } from "next/navigation"
 import MyTasksView from "@/components/my-tasks-view"
 
 export default async function MyTasksPage() {
-  const supabase = createClient()
+  const supabase = await createClient()
   const {
     data: { user },
   } = await supabase.auth.getUser()

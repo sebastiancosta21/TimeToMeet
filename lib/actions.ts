@@ -3,6 +3,7 @@
 import { createClient } from "@/lib/supabase/server"
 import { redirect } from "next/navigation"
 import { revalidatePath } from "next/cache"
+import { sendMeetingSummary as sendMeetingSummaryEmail } from "@/lib/email"
 
 export async function signIn(prevState: any, formData: FormData) {
   console.log("[v0] SignIn function called")
@@ -18,7 +19,7 @@ export async function signIn(prevState: any, formData: FormData) {
       return { error: "Email and password are required" }
     }
 
-    const supabase = createClient()
+    const supabase = await createClient()
     const { error } = await supabase.auth.signInWithPassword({
       email,
       password,
@@ -53,7 +54,7 @@ export async function signUp(prevState: any, formData: FormData) {
       return { error: "Email and password are required" }
     }
 
-    const supabase = createClient()
+    const supabase = await createClient()
 
     const getRedirectUrl = () => {
       // For development, use the dev environment variable
@@ -93,14 +94,14 @@ export async function signUp(prevState: any, formData: FormData) {
 }
 
 export async function signOut() {
-  const supabase = createClient()
+  const supabase = await createClient()
   await supabase.auth.signOut()
   revalidatePath("/", "layout")
   redirect("/auth/login")
 }
 
 export async function createMeeting(formData: FormData) {
-  const supabase = createClient()
+  const supabase = await createClient()
 
   const title = formData.get("title") as string
   const description = formData.get("description") as string
@@ -146,7 +147,7 @@ export async function createMeeting(formData: FormData) {
 export async function addParticipant(meetingId: string, email: string) {
   console.log("[v0] addParticipant called with:", { meetingId, email })
 
-  const supabase = createClient()
+  const supabase = await createClient()
 
   console.log("[v0] Getting user authentication...")
   const {
@@ -229,13 +230,60 @@ export async function addParticipant(meetingId: string, email: string) {
 }
 
 export async function submitMeetingSummary(meetingId: string) {
-  const supabase = createClient()
+  const supabase = await createClient()
 
   try {
     const { data: meeting } = await supabase.from("meetings").select("*").eq("id", meetingId).single()
 
     if (!meeting) {
       return { error: "Meeting not found" }
+    }
+
+    // Fetch participants for email recipients
+    const { data: participants } = await supabase
+      .from("meeting_participants")
+      .select("email")
+      .eq("meeting_id", meetingId)
+
+    // Fetch discussion items for email content
+    const { data: discussionItems } = await supabase
+      .from("discussion_items")
+      .select("title, description")
+      .eq("meeting_id", meetingId)
+      .eq("status", "pending")
+
+    // Fetch todos for email content
+    const { data: todos } = await supabase
+      .from("todos")
+      .select("title, assigned_to_email, due_date")
+      .eq("meeting_id", meetingId)
+
+    if (participants && participants.length > 0) {
+      const participantEmails = participants.map((p) => p.email)
+
+      console.log("[v0] Sending meeting summary email to:", participantEmails)
+
+      const emailResult = await sendMeetingSummaryEmail({
+        to: participantEmails,
+        meetingTitle: meeting.title,
+        meetingDate: new Date(meeting.scheduled_date).toLocaleDateString("en-US", {
+          weekday: "long",
+          year: "numeric",
+          month: "long",
+          day: "numeric",
+        }),
+        discussionItems: discussionItems || [],
+        todos: todos || [],
+      })
+
+      if (!emailResult.success) {
+        console.log("[v0] Email sending failed:", emailResult.error)
+        return { error: "Failed to send email summary: " + emailResult.error }
+      }
+
+      console.log("[v0] Email summary sent successfully")
+    } else {
+      console.log("[v0] No participants found, skipping email")
     }
 
     // For one-time meetings, close the meeting
@@ -253,7 +301,7 @@ export async function submitMeetingSummary(meetingId: string) {
 }
 
 export async function closeMeeting(meetingId: string) {
-  const supabase = createClient()
+  const supabase = await createClient()
 
   const { error } = await supabase.from("meetings").update({ status: "closed" }).eq("id", meetingId)
 

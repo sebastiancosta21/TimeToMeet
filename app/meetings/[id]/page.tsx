@@ -10,7 +10,7 @@ interface MeetingPageProps {
 }
 
 export default async function MeetingPage({ params }: MeetingPageProps) {
-  const supabase = createClient()
+  const supabase = await createClient()
 
   // Check authentication
   const {
