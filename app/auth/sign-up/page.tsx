@@ -12,15 +12,19 @@ export default async function SignUpPage() {
     )
   }
 
-  // Check if user is already logged in
-  const supabase = createClient()
-  const {
-    data: { session },
-  } = await supabase.auth.getSession()
+  try {
+    // Check if user is already logged in
+    const supabase = await createClient()
+    const {
+      data: { session },
+    } = await supabase.auth.getSession()
 
-  // If user is logged in, redirect to home page
-  if (session) {
-    redirect("/")
+    // If user is logged in, redirect to home page
+    if (session) {
+      redirect("/")
+    }
+  } catch (error) {
+    console.error("Error checking session during build:", error)
   }
 
   return (
