@@ -25,6 +25,10 @@ export default function ForgotPasswordPage() {
 
     try {
       const getRedirectUrl = () => {
+        console.log("[v0] Environment variables check:")
+        console.log("[v0] NEXT_PUBLIC_DEV_SUPABASE_REDIRECT_URL:", process.env.NEXT_PUBLIC_DEV_SUPABASE_REDIRECT_URL)
+        console.log("[v0] typeof window:", typeof window)
+
         // For development with explicit dev URL
         if (process.env.NEXT_PUBLIC_DEV_SUPABASE_REDIRECT_URL) {
           console.log("[v0] Using dev redirect URL:", process.env.NEXT_PUBLIC_DEV_SUPABASE_REDIRECT_URL)
@@ -34,8 +38,18 @@ export default function ForgotPasswordPage() {
         // For client-side production detection
         if (typeof window !== "undefined") {
           const origin = window.location.origin
+          const hostname = window.location.hostname
+          const protocol = window.location.protocol
+          const port = window.location.port
+
+          console.log("[v0] Window location details:")
+          console.log("[v0] - hostname:", hostname)
+          console.log("[v0] - protocol:", protocol)
+          console.log("[v0] - port:", port)
+          console.log("[v0] - origin:", origin)
+
           const redirectUrl = `${origin}/auth/reset-password`
-          console.log("[v0] Using current origin URL:", redirectUrl)
+          console.log("[v0] Constructed redirect URL:", redirectUrl)
           return redirectUrl
         }
 
@@ -46,18 +60,28 @@ export default function ForgotPasswordPage() {
       }
 
       const redirectUrl = getRedirectUrl()
-      console.log("[v0] Final redirect URL being sent to Supabase:", redirectUrl)
+      console.log("[v0] ===== FINAL REDIRECT URL BEING SENT TO SUPABASE =====")
+      console.log("[v0] Redirect URL:", redirectUrl)
+      console.log("[v0] Email:", email)
+      console.log("[v0] ================================================")
 
-      const { error: resetError } = await supabase.auth.resetPasswordForEmail(email, {
+      const { data, error: resetError } = await supabase.auth.resetPasswordForEmail(email, {
         redirectTo: redirectUrl,
       })
 
+      console.log("[v0] Supabase resetPasswordForEmail response:")
+      console.log("[v0] - data:", data)
+      console.log("[v0] - error:", resetError)
+
       if (resetError) {
+        console.log("[v0] Reset password error:", resetError.message)
         setError(resetError.message)
       } else {
+        console.log("[v0] Reset password email sent successfully")
         setSuccess(true)
       }
     } catch (err) {
+      console.log("[v0] Unexpected error in forgot password:", err)
       setError("An unexpected error occurred")
     } finally {
       setIsPending(false)
